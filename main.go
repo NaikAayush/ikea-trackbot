@@ -65,15 +65,15 @@ func main() {
 func triggerIkea() {
 	data := []Payload{
 		{
-			OperationName: "orderLookup",
+			OperationName: "DeliveryMethodsOrder",
 			Variables: Variables{
-				OrderNumber: OrderNumber,
-				LiteID:      "",
+				OrderNumber:   OrderNumber,
+				ReceiptNumber: "",
+				LiteID:        "",
 			},
-			Query: query,
+			Query: queryV2,
 		},
 	}
-
 	payloadBytes, err := json.Marshal(data)
 	if err != nil {
 		log.Println(err.Error())
@@ -96,7 +96,7 @@ func triggerIkea() {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		response := []ResponseBody{}
+		response := []ResponseBodyV2{}
 		json.NewDecoder(resp.Body).Decode(&response)
 		b, err := json.MarshalIndent(response, "", "  ")
 
@@ -104,8 +104,16 @@ func triggerIkea() {
 			log.Println(err)
 		}
 		log.Println(string(b))
-		status := response[0].Data.Order.DeliveryMethods[0].Status
-		SendMessage(status)
+		statusV1 := response[0].Data.Order.DeliveryMethods[0].Status
+		statusV2 := response[0].Data.Order.DeliveryMethods[0].StatusV2
+
+		statusV2JSON, err2 := json.MarshalIndent(statusV2, "", "  ")
+		if err2 != nil {
+			log.Println(err)
+		}
+		SendMessage(statusV1)
+		SendMessage(string(statusV2JSON))
+
 	}
 }
 
@@ -138,8 +146,8 @@ func SendMessage(text string) (bool, error) {
 		return false, err
 	}
 
-	fmt.Printf("Message '%s' was sent", text)
-	fmt.Printf("Response JSON: %s", string(body))
+	log.Printf("Message '%s' was sent", text)
+	log.Printf("Response JSON: %s", string(body))
 
 	return true, nil
 }
